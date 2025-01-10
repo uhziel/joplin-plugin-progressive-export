@@ -1,0 +1,16 @@
+{
+	"manifest_version": 1,
+	"id": "xyz.570499536.ProgressiveExport",
+	"app_min_version": "3.2",
+	"version": "1.0.0",
+	"name": "Progressive Export",
+	"description": "",
+	"author": "uhziel@gmail.com",
+	"homepage_url": "https://github.com/uhziel/joplin-plugin-progressive-export",
+	"repository_url": "https://github.com/uhziel/joplin-plugin-progressive-export",
+	"keywords": [],
+	"categories": [],
+	"screenshots": [],
+	"icons": {},
+	"promo_tile": {}
+}
