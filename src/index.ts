@@ -86,6 +86,14 @@ function dirname(path: string): string {
 	return s.join('/')
 }
 
+// 只处理文件名本身，不接受其绝对路径、相对路径
+function safeFilename(filename: string): string {
+	if (!filename || !filename.replace) {
+		return "Untitled"
+	}
+	return filename.replace(/\//g, '_').trim()
+}
+
 enum ModelType {
 	Note = 1,
 	Folder = 2,
@@ -114,7 +122,7 @@ joplin.plugins.register({
 					const dirPath = `${context.destPath}/${await relativeDirPath(item)}`
 					await fs.mkdirp(dirPath)
 				} else if (itemType === ModelType.Note) {
-					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${item.title}.md`
+					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${safeFilename(item.title)}.md`
 					const noteTags = await noteTagsGet(item.id)
 					await fs.mkdirp(dirname(filePath))
 					await fs.writeFile(filePath, serialize(item, noteTags), 'utf8')
