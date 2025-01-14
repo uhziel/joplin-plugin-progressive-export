@@ -4,6 +4,21 @@ import { ExportContext, FileSystemItem } from 'api/types'
 const fs = require('fs-extra')
 import path = require('path')
 
+function rfc3339(d: Date): string {
+	function atLeast2Digits(n: number): string {
+		return (n < 10 ? '0': '') + n
+	}
+
+	const YYYY = d.getFullYear()
+	const MM = atLeast2Digits(d.getMonth() + 1)
+	const DD = atLeast2Digits(d.getDate())
+	const HH = atLeast2Digits(d.getHours())
+	const mm = atLeast2Digits(d.getMinutes())
+	const ss = atLeast2Digits(d.getSeconds())
+
+	return `${YYYY}-${MM}-${DD}T${HH}:${mm}:${ss}+08:00`
+}
+
 function resourceDir(context: ExportContext) {
 	return context.destPath + '/assets'
 }
@@ -26,8 +41,34 @@ async function folderGet(id: string) {
 	return await joplin.data.get(['folders', id])
 }
 
-async function noteGet(id: string) {
-	return await joplin.data.get(['notes', id])
+async function noteTagsGet(id: string): Promise<string[]> {
+	const noteTags = await joplin.data.get(['notes', id, 'tags'])
+	console.assert(!noteTags.has_more)
+	let res: string[] = []
+	res = noteTags.items.map((noteTag: any) => noteTag.title)
+	return res
+}
+
+function unixEpoch2RFC3339(unixEpochMs: number): string {
+	const d = new Date(unixEpochMs)
+	return rfc3339(d)
+}
+
+function frontMatter(note: any, noteTags: string[]): string {
+	let res: string = ""
+	res += `updated: ${unixEpoch2RFC3339(note.user_updated_time)}\n`
+	res += `created: ${unixEpoch2RFC3339(note.user_created_time)}\n`
+	if (noteTags.length > 0) {
+		res += `tags:\n`
+		for (let i = 0; i < noteTags.length; i++) {
+			res += `  - ${noteTags[i]}\n`
+		}
+	}
+	return res
+}
+
+function serialize(note: any, noteTags: string[]): string {
+	return `---\n${frontMatter(note, noteTags)}---\n\n${note.body}`
 }
 
 enum ModelType {
@@ -58,7 +99,8 @@ joplin.plugins.register({
 					fs.mkdirp(dirPath)
 				} else if (itemType === ModelType.Note) {
 					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${item.title}.md`
-					await fs.writeFile(filePath, item.body, 'utf8')
+					const noteTags = await noteTagsGet(item.id)
+					await fs.writeFile(filePath, serialize(item, noteTags), 'utf8')
 				}
 			},
 
