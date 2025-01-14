@@ -64,6 +64,12 @@ function frontMatter(note: any, noteTags: string[]): string {
 			res += `  - ${noteTags[i]}\n`
 		}
 	}
+	if (note.source_url) {
+		res += `source: ${note.source_url}\n`
+	}
+	if (note.latitude != 0 || note.longitude != 0) {
+		res += `location: "${note.latitude},${note.longitude}"\n`
+	}
 	return res
 }
 
