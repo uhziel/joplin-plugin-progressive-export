@@ -77,6 +77,15 @@ function serialize(note: any, noteTags: string[]): string {
 	return `---\n${frontMatter(note, noteTags)}---\n\n${note.body}`
 }
 
+function dirname(path: string): string {
+	if (!path) {
+		throw new Error("path is empty")
+	}
+	const s = path.split(/\/|\\/)
+	s.pop()
+	return s.join('/')
+}
+
 enum ModelType {
 	Note = 1,
 	Folder = 2,
@@ -100,12 +109,14 @@ joplin.plugins.register({
 			},
 
 			onProcessItem: async (context: ExportContext, itemType: number, item: any) => {
+				console.log("onProcessItem", item)
 				if (itemType === ModelType.Folder) {
 					const dirPath = `${context.destPath}/${await relativeDirPath(item)}`
 					fs.mkdirp(dirPath)
 				} else if (itemType === ModelType.Note) {
 					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${item.title}.md`
 					const noteTags = await noteTagsGet(item.id)
+					fs.mkdirp(dirname(filePath))
 					await fs.writeFile(filePath, serialize(item, noteTags), 'utf8')
 				}
 			},
