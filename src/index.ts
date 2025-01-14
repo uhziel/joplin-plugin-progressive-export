@@ -112,11 +112,11 @@ joplin.plugins.register({
 				console.log("onProcessItem", item)
 				if (itemType === ModelType.Folder) {
 					const dirPath = `${context.destPath}/${await relativeDirPath(item)}`
-					fs.mkdirp(dirPath)
+					await fs.mkdirp(dirPath)
 				} else if (itemType === ModelType.Note) {
 					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${item.title}.md`
 					const noteTags = await noteTagsGet(item.id)
-					fs.mkdirp(dirname(filePath))
+					await fs.mkdirp(dirname(filePath))
 					await fs.writeFile(filePath, serialize(item, noteTags), 'utf8')
 				}
 			},
