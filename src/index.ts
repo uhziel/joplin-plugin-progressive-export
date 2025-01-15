@@ -20,7 +20,7 @@ function rfc3339(d: Date): string {
 }
 
 function resourceDir(context: ExportContext) {
-	return context.destPath + '/assets'
+	return context.destPath + '/assets/joplin'
 }
 
 async function relativeDirPath(item: any) {
@@ -141,6 +141,16 @@ joplin.plugins.register({
 			onProcessResource: async (context: ExportContext, resource: any, filePath: string) => {
 				const destPath = resourceDir(context) + '/' + path.basename(filePath)
 				await fs.copy(filePath, destPath)
+				if (resource.title || resource.filename) {
+					const metadata = {}
+					if (resource.title) {
+						metadata["title"] = resource.title
+					}
+					if (resource.filename) {
+						metadata["filename"] = resource.filename
+					}
+					await fs.writeFile(destPath+".metadata", JSON.stringify(metadata), 'utf8')
+				}
 			},
 
 			onClose: async (context: ExportContext) => {},
