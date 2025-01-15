@@ -54,7 +54,7 @@ function unixEpoch2RFC3339(unixEpochMs: number): string {
 	return rfc3339(d)
 }
 
-function frontMatter(note: any, noteTags: string[]): string {
+function frontMatter(note: any, noteTags: string[], alias: string): string {
 	let res: string = ""
 	res += `updated: ${unixEpoch2RFC3339(note.user_updated_time)}\n`
 	res += `created: ${unixEpoch2RFC3339(note.user_created_time)}\n`
@@ -70,11 +70,15 @@ function frontMatter(note: any, noteTags: string[]): string {
 	if (note.latitude != 0 || note.longitude != 0) {
 		res += `location: "${note.latitude},${note.longitude}"\n`
 	}
+	if (alias) {
+		res += `aliases:\n`
+		res += `  - ${alias}\n`
+	}
 	return res
 }
 
-function serialize(note: any, noteTags: string[]): string {
-	return `---\n${frontMatter(note, noteTags)}---\n\n${note.body}`
+function serialize(note: any, noteTags: string[], alias: string): string {
+	return `---\n${frontMatter(note, noteTags, alias)}---\n\n${note.body}`
 }
 
 function dirname(path: string): string {
@@ -122,10 +126,15 @@ joplin.plugins.register({
 					const dirPath = `${context.destPath}/${await relativeDirPath(item)}`
 					await fs.mkdirp(dirPath)
 				} else if (itemType === ModelType.Note) {
-					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${safeFilename(item.title)}.md`
+					const noteFilename = safeFilename(item.title)
+					let alias = ""
+					if (noteFilename !== item.title) {
+						alias = item.title
+					}
+					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${noteFilename}.md`
 					const noteTags = await noteTagsGet(item.id)
 					await fs.mkdirp(dirname(filePath))
-					await fs.writeFile(filePath, serialize(item, noteTags), 'utf8')
+					await fs.writeFile(filePath, serialize(item, noteTags, alias), 'utf8')
 				}
 			},
 
