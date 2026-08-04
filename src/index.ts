@@ -20,7 +20,7 @@ function rfc3339(d: Date): string {
 }
 
 function resourceDir(context: ExportContext) {
-	return context.destPath + '/assets/joplin'
+	return context.destPath + '/' + ASSET_LINK_PREFIX
 }
 
 async function relativeDirPath(item: any) {
@@ -134,12 +134,13 @@ joplin.plugins.register({
 					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${noteFilename}.md`
 					const noteTags = await noteTagsGet(item.id)
 					await fs.mkdirp(dirname(filePath))
+          item.body = await adjustBody(item.body)
 					await fs.writeFile(filePath, serialize(item, noteTags, alias), 'utf8')
 				}
 			},
 
 			onProcessResource: async (context: ExportContext, resource: any, filePath: string) => {
-				const destPath = resourceDir(context) + '/' + path.basename(filePath)
+				const destPath = resourceDir(context) + path.basename(filePath)
 				await fs.copy(filePath, destPath)
 				if (resource.title || resource.filename) {
 					const metadata = {}
@@ -157,3 +158,63 @@ joplin.plugins.register({
 		})
 	},
 })
+
+const ASSET_LINK_PREFIX = "assets/joplin/"
+
+// <img/> 转换为 ![]()
+//   <img src=":/5d9205caebfdee47fe64eac3f91779ca" width="56" height="56" alt="颗豆互动"/>
+//   <img src=":/5d9205caebfdee47fe64eac3f91779ca" width="56" height="56"/>
+function convertImgTags(content: string): string {
+	// 带 alt 的：<img src=":/<id>" ... alt="<text>"/> -> ![<text>](<id>)
+	content = content.replace(/<img src="(:\/[0-9a-zA-Z]{32})".*alt="([^"]*)"\/>/g, '![$2]($1)')
+	// 不带 alt 的：<img src=":/<id>" ... /> -> ![](<id>)
+	content = content.replace(/<img src="(:\/[0-9a-zA-Z]{32})"[^/]*\/>/g, '![]($1)')
+	return content
+}
+
+// 引用是文件而不是笔记的，需要替换为文件路径
+//   ![title](:/joplinid) -> ![title](assets/joplin/joplinid.ext)
+//   ![](:/ce59e12258a70b03de83524c214f4fee)
+//   [2021年happy上海之旅.pdf](:/b3f8548fc1cd95da5a926eb6d2c808b7)
+async function replaceFileReferences(content: string): Promise<string> {
+	// 收集所有 ](:/<id> 形式出现的 id，等价于
+	//   grep -Eo ']\(:/[0-9a-zA-Z]{32}' "${file}" | cut -c5-
+	const idRegex = /\]\((:\/[0-9a-zA-Z]{32})/g
+	const ids = new Set<string>()
+	let m: RegExpExecArray | null
+	while ((m = idRegex.exec(content)) !== null) {
+		// m[1] 为 ":/<id>"，去掉前两个字符得到 <id>
+		ids.add(m[1].slice(2))
+	}
+
+	for (const id of ids) {
+		const basename = await findAssetBasename(id)
+		if (basename === null) continue
+		const assetpath = ASSET_LINK_PREFIX + basename
+		// 把所有 :/<id> 替换为 assetpath（等价于 sed -Ei "s_:/${joplinid}_${assetpath}_g"）
+		content = content.split(':/' + id).join(assetpath)
+	}
+	return content
+}
+
+async function findAssetBasename(joplinid: string): Promise<string | null> {
+  let fullPath = ""
+  try {
+    fullPath = await joplin.data.resourcePath(joplinid)
+  } catch {
+    return null
+  }
+	return path.basename(fullPath)
+}
+
+// [title](:/joplinid) -> [[title]]
+function convertNoteReferences(content: string): string {
+	return content.replace(/\[([^]]*)\]\(:\/[0-9a-zA-Z]{32}\)/g, '[[$1]]')
+}
+
+async function adjustBody(body: string): Promise<string> {
+	body = convertImgTags(body)
+	body = await replaceFileReferences(body)
+	body = convertNoteReferences(body)
+  return body
+}
