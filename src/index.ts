@@ -166,7 +166,7 @@ const ASSET_LINK_PREFIX = "assets/joplin/"
 //   <img src=":/5d9205caebfdee47fe64eac3f91779ca" width="56" height="56"/>
 function convertImgTags(content: string): string {
 	// 带 alt 的：<img src=":/<id>" ... alt="<text>"/> -> ![<text>](<id>)
-	content = content.replace(/<img src="(:\/[0-9a-zA-Z]{32})".*alt="([^"]*)"\/>/g, '![$2]($1)')
+	content = content.replace(/<img src="(:\/[0-9a-zA-Z]{32})"[^/]*alt="([^"]*)"\/>/g, '![$2]($1)')
 	// 不带 alt 的：<img src=":/<id>" ... /> -> ![](<id>)
 	content = content.replace(/<img src="(:\/[0-9a-zA-Z]{32})"[^/]*\/>/g, '![]($1)')
 	return content
@@ -209,7 +209,7 @@ async function findAssetBasename(joplinid: string): Promise<string | null> {
 
 // [title](:/joplinid) -> [[title]]
 function convertNoteReferences(content: string): string {
-	return content.replace(/\[([^]]*)\]\(:\/[0-9a-zA-Z]{32}\)/g, '[[$1]]')
+  return content.replace(/\[([^\]]*)\]\(:\/[0-9a-zA-Z]{32}\)/g, '[[$1]]')
 }
 
 async function adjustBody(body: string): Promise<string> {
