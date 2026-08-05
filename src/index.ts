@@ -209,7 +209,7 @@ async function findAssetBasename(joplinid: string): Promise<string | null> {
 
 // [title](:/joplinid) -> [[title]]
 function convertNoteReferences(content: string): string {
-  return content.replace(/\[([^\]]*)\]\(:\/[0-9a-zA-Z]{32}\)/g, '[[$1]]')
+  return content.replace(/[^!]\[([^\]]+)\]\(:\/[0-9a-zA-Z]{32}\)/g, '[[$1]]')
 }
 
 async function adjustBody(body: string): Promise<string> {
