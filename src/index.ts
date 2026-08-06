@@ -98,6 +98,22 @@ function safeFilename(filename: string): string {
 	return filename.replace(/\//g, '_').trim()
 }
 
+// 若目标路径已存在同名文件，则在文件名后追加 (1)、(2)… 后缀，避免覆盖
+async function uniqueFilePath(filePath: string): Promise<string> {
+	if (!(await fs.pathExists(filePath))) {
+		return filePath
+	}
+	const dir = path.dirname(filePath)
+	const ext = path.extname(filePath)
+	const base = path.basename(filePath, ext)
+	for (let i = 1; ; i++) {
+		const candidate = path.join(dir, `${base} zhulei(${i})${ext}`)
+		if (!(await fs.pathExists(candidate))) {
+			return candidate
+		}
+	}
+}
+
 enum ModelType {
 	Note = 1,
 	Folder = 2,
@@ -131,7 +147,7 @@ joplin.plugins.register({
 					if (noteFilename !== item.title) {
 						alias = item.title
 					}
-					const filePath = `${context.destPath}/${await relativeDirPath(item)}/${noteFilename}.md`
+					const filePath = await uniqueFilePath(`${context.destPath}/${await relativeDirPath(item)}/${noteFilename}.md`)
 					const noteTags = await noteTagsGet(item.id)
 					await fs.mkdirp(dirname(filePath))
           item.body = await adjustBody(item.body)
