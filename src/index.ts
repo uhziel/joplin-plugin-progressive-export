@@ -212,9 +212,29 @@ function convertNoteReferences(content: string): string {
   return content.replace(/[^!]\[([^\]]+)\]\(:\/[0-9a-zA-Z]{32}\)/g, '[[$1]]')
 }
 
+// [[123 title/abc]] -> [[123 title_abc]]
+function safeWikiLinkName(content: string): string {
+	const wikiLinkRegex = /\[\[[^\]]+\]\]/g
+	const wikiLinks = new Set<string>()
+	let m: RegExpExecArray | null
+	while ((m = wikiLinkRegex.exec(content)) !== null) {
+		wikiLinks.add(m[0])
+	}
+
+	for (const link of wikiLinks) {
+    const safeLink = link.replace('/', '_')
+    if (link === safeLink) {
+      continue
+    }
+		content = content.split(link).join(safeLink)
+	}
+	return content
+}
+
 async function adjustBody(body: string): Promise<string> {
 	body = convertImgTags(body)
 	body = await replaceFileReferences(body)
 	body = convertNoteReferences(body)
+	body = safeWikiLinkName(body)
   return body
 }
