@@ -238,7 +238,7 @@ function safeWikiLinkName(content: string): string {
 	}
 
 	for (const link of wikiLinks) {
-    const safeLink = link.replace('/', '_')
+    const safeLink = link.replace(/\//g, '_')
     if (link === safeLink) {
       continue
     }
